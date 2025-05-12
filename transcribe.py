@@ -1,36 +1,11 @@
-import instaloader
 import streamlit as st
-import moviepy.editor as mp
-import os
 import assemblyai as aai
+import os
 
 # Set AssemblyAI API key
 aai.settings.api_key = "bdd3381c1ebe4ecab9df5207a255d42e"
 
-# Function to download Instagram Reel
-def download_reel(url):
-    try:
-        loader = instaloader.Instaloader()
-        post = instaloader.Post.from_shortcode(loader.context, url.split('/')[-2])
-        loader.download_post(post, target='reel')
-        video_file = [f for f in os.listdir('reel') if f.endswith('.mp4')][0]
-        return os.path.join('reel', video_file)
-    except Exception as e:
-        st.error(f"Error downloading reel: {e}")
-        return None
-
-# Function to convert video to audio
-def convert_video_to_audio(video_file):
-    try:
-        clip = mp.VideoFileClip(video_file)
-        audio_file = "audio.wav"
-        clip.audio.write_audiofile(audio_file)
-        return audio_file
-    except Exception as e:
-        st.error(f"Error converting video to audio: {e}")
-        return None
-
-# Function to transcribe audio using AssemblyAI
+# Function to transcribe audio
 def transcribe_audio(audio_file):
     transcriber = aai.Transcriber()
     config = aai.TranscriptionConfig(speaker_labels=True)
@@ -48,39 +23,29 @@ def transcribe_audio(audio_file):
         return None
 
 # Streamlit UI
-st.title("Instagram Reels Transcription")
+st.title("Audio Transcription Tool")
 
-url = st.text_input("Enter Reel URL:")
+uploaded_file = st.file_uploader("Upload an audio file (MP3/WAV)", type=["mp3", "wav"])
 
-if st.button("Transcribe Reel"):
-    if url:
-        st.write("Downloading Reel...")
-        video_file = download_reel(url)
+if uploaded_file:
+    st.write("Transcribing audio...")
+    
+    # Save the uploaded file temporarily
+    audio_file = "uploaded_audio.wav"
+    with open(audio_file, "wb") as f:
+        f.write(uploaded_file.read())
+    
+    # Transcribe
+    transcript = transcribe_audio(audio_file)
+    
+    if transcript:
+        st.success("Transcription Completed!")
+        st.text_area("Transcript:", transcript.text)
         
-        if video_file:
-            st.write("Converting video to audio...")
-            audio_file = convert_video_to_audio(video_file)
-            
-            if audio_file:
-                st.write("Transcribing audio...")
-                transcript = transcribe_audio(audio_file)
-                
-                if transcript:
-                    st.success("Transcription Completed!")
-                    st.text_area("Transcript:", transcript.text)
-
-                    st.write("Speaker-wise transcription:")
-                    for utterance in transcript.utterances:
-                        st.write(f"Speaker {utterance.speaker}: {utterance.text}")
-                
-                # Clean up files
-                if os.path.exists(video_file):
-                    os.remove(video_file)
-                if os.path.exists(audio_file):
-                    os.remove(audio_file)
-            else:
-                st.error("Failed to convert video to audio.")
-        else:
-            st.error("Failed to download the reel.")
-    else:
-        st.error("Please enter a valid Reel URL.")
+        st.write("Speaker-wise transcription:")
+        for utterance in transcript.utterances:
+            st.write(f"Speaker {utterance.speaker}: {utterance.text}")
+    
+    # Clean up
+    if os.path.exists(audio_file):
+        os.remove(audio_file)
