@@ -5,7 +5,7 @@ import os
 import assemblyai as aai
 
 # Set AssemblyAI API key
-aai.settings.api_key = "AssemblyAI API key"
+aai.settings.api_key = "bdd3381c1ebe4ecab9df5207a255d42e"
 # Function to download Instagram Reel
 def download_reel(url):
     try:
